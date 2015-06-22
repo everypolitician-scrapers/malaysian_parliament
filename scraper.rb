@@ -22,7 +22,7 @@ def scrape_list(term, url)
       name: tds[2].text.strip,
       party: (term == 13) ? tds[3].text.strip : 'unknown',
       area: tds[term == 13 ? 4 : 3].text.strip,
-      term: 13,
+      term: term,
       source: url,
     }
     ScraperWiki.save_sqlite([:name, :term], data)
