@@ -1,25 +1,38 @@
-# This is a template for a Ruby scraper on morph.io (https://morph.io)
-# including some code snippets below that you should find helpful
+#!/bin/env ruby
+# encoding: utf-8
 
-# require 'scraperwiki'
-# require 'mechanize'
-#
-# agent = Mechanize.new
-#
-# # Read in a page
-# page = agent.get("http://foo.com")
-#
-# # Find somehing on the page using css selectors
-# p page.at('div.content')
-#
-# # Write out to the sqlite database using scraperwiki library
-# ScraperWiki.save_sqlite(["name"], {"name" => "susan", "occupation" => "software developer"})
-#
-# # An arbitrary query against the database
-# ScraperWiki.select("* from data where 'name'='peter'")
+require 'scraperwiki'
+require 'nokogiri'
+require 'open-uri'
 
-# You don't have to do things with the Mechanize or ScraperWiki libraries.
-# You can use whatever gems you want: https://morph.io/documentation/ruby
-# All that matters is that your final data is written to an SQLite database
-# called "data.sqlite" in the current working directory which has at least a table
-# called "data".
+require 'pry'
+require 'open-uri/cached'
+OpenURI::Cache.cache_path = '.cache'
+
+def noko_for(url)
+  Nokogiri::HTML(open(url).read) 
+end
+
+def scrape_list(term, url)
+  puts "Fetching Parliament #{term}"
+  noko = noko_for(url)
+  noko.css('#mytable tbody tr').each do |row|
+    tds = row.css('td')
+    data = { 
+      name: tds[2].text.strip,
+      party: (term == 13) ? tds[3].text.strip : 'unknown',
+      area: tds[term == 13 ? 4 : 3].text.strip,
+      term: 13,
+      source: url,
+    }
+    ScraperWiki.save_sqlite([:name, :term], data)
+  end
+end
+
+# Current
+scrape_list(13, 'http://www.parlimen.gov.my/ahli-dewan.html?uweb=dr&')
+
+# Historic
+(1..12).each do |term|
+  scrape_list(term, 'http://www.parlimen.gov.my/ahli-dewan.html?uweb=dr&arkib=yes&vol=%d' % term)
+end
